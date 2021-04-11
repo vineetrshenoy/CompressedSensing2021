@@ -64,3 +64,8 @@ class CIFAR10Classifier(pl.LightningModule):
         # Create a confusion matrix
         cm_normalized = confusion_matrix(y, predicted_class, normalize='true')
         self.cm = cm_normalized
+
+    def test_epoch_end(self, test_step_outputs):
+        print("YOYO")
+        print(type(test_step_outputs))
+        print(len(test_step_outputs))

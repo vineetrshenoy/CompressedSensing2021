@@ -19,7 +19,6 @@ batch_size = 128
 num_epochs = 10
 momentum = 0.9
 learning_rate = 0.001
-test_batch_size = 10000
 val_split = 0.1  # proportion of training data to use for validation
 
 bar_refresh_rate = 1  # how often to compute loss for display
@@ -41,7 +40,7 @@ valloader = torch.utils.data.DataLoader(valset, batch_size=len(valset),
 
 testset = torchvision.datasets.FashionMNIST(root="data", train=False,
                                        download=True, transform=transforms.ToTensor())
-testloader = torch.utils.data.DataLoader(testset, batch_size=test_batch_size,
+testloader = torch.utils.data.DataLoader(testset, batch_size=len(testset),
                                          shuffle=False, num_workers=n_workers)
 
 net = CIFAR10Classifier(resnet20())

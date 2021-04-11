@@ -1,4 +1,6 @@
 '''
+Modified ResNet for MNIST & FashionMNIST datasets (A. Reddy)
+--
 Properly implemented ResNet-s for CIFAR10 as described in paper [1].
 The implementation and structure of this file is hugely influenced by [2]
 which is implemented for ImageNet and doesn't have option A for identity.
@@ -21,12 +23,9 @@ Reference:
 If you use this implementation in you work, please don't forget to mention the
 author, Yerlan Idelbayev.
 '''
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
-
-from torch.autograd import Variable
 
 __all__ = ['ResNet', 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110', 'resnet1202']
 
