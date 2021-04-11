@@ -16,7 +16,7 @@ from utils import plot_results
 
 # Configuration
 batch_size = 128
-num_epochs = 10
+num_epochs = 25
 momentum = 0.9
 learning_rate = 0.001
 val_split = 0.1  # proportion of training data to use for validation
