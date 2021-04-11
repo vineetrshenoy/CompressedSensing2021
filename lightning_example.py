@@ -10,7 +10,7 @@ import torchvision
 import torchvision.transforms as transforms
 import pytorch_lightning as pl
 from resnet import resnet20
-from Classifiers import CIFAR10Classifier
+from Classifiers import MNISTClassifier
 
 from utils import plot_results
 
@@ -43,7 +43,7 @@ testset = torchvision.datasets.FashionMNIST(root="data", train=False,
 testloader = torch.utils.data.DataLoader(testset, batch_size=len(testset),
                                          shuffle=False, num_workers=n_workers)
 
-net = CIFAR10Classifier(resnet20())
+net = MNISTClassifier(resnet20())
 
 if torch.cuda.is_available():
     trainer = pl.Trainer(gpus=-1, accelerator='ddp', max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)

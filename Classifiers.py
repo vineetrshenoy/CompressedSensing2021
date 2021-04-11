@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 
 
-class CIFAR10Classifier(pl.LightningModule):
+class MNISTClassifier(pl.LightningModule):
     def __init__(self, backbone):
         super().__init__()
         # The actual neural network
@@ -58,14 +58,21 @@ class CIFAR10Classifier(pl.LightningModule):
         y = y.cpu().detach().numpy()
         predicted_class = predicted_class.cpu().detach().numpy()
         # Compute accuracy
-        accuracy = np.sum(predicted_class == y) / len(y)
+        n_correct = np.sum(predicted_class == y)
+        accuracy = n_correct / len(y)
         self.overall_accuracy = accuracy
-        print('Overall Accuracy: %.3f' % accuracy)
+        # print('Overall Accuracy: %.3f' % accuracy)
         # Create a confusion matrix
         cm_normalized = confusion_matrix(y, predicted_class, normalize='true')
         self.cm = cm_normalized
 
+        return n_correct, len(y)
+
     def test_epoch_end(self, test_step_outputs):
+        n_correct = np.sum(list(zip(*test_step_outputs)[0]))
+        testset_size = np.sum(list(zip(*test_step_outputs[1])))
+
         print("YOYO")
         print(type(test_step_outputs))
         print(len(test_step_outputs))
+        print('Overall Accuracy: %.3f' % n_correct / testset_size)
