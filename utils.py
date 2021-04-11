@@ -4,7 +4,11 @@ import numpy as np
 from sklearn.metrics import ConfusionMatrixDisplay
 
 # MNIST class names
-classes = tuple([str(x) for x in range(10)])
+# classes = tuple([str(x) for x in range(10)])
+
+# Fashion MNIST class names
+classes = ('T-Shirt', 'Trouser', 'Pullover', 'Dress', 'Coat',
+           'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Boot')
 
 
 def plot_results(model):
@@ -35,7 +39,7 @@ def plot_results(model):
     ax3.grid(True)
 
     fig.tight_layout()
-    plt.savefig("outputs/training_plot.png", dpi=500)
+    plt.savefig("outputs/training_plot.png", dpi=250)
     plt.show()
 
     # Plot confusion matrix
@@ -44,4 +48,4 @@ def plot_results(model):
     cm_plot = ConfusionMatrixDisplay(confusion_matrix=model.cm, display_labels=classes)
     cm_plot.plot(cmap=plt.cm.Blues)
     plt.title('Confusion Matrix (Total Accuracy = %.3f%%)' % (100 * model.overall_accuracy))
-    plt.savefig("outputs/confusion_matrix.png", dpi=500)
+    plt.savefig("outputs/confusion_matrix.png", dpi=250)
