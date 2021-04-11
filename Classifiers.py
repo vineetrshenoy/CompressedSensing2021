@@ -2,7 +2,7 @@ import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 import numpy as np
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix
 
 
 class CIFAR10Classifier(pl.LightningModule):
