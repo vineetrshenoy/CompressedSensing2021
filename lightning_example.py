@@ -25,13 +25,17 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 # from densenet import densenet121
 from resnet import resnet20
 
+from Classifiers import CIFAR10Classifier
+
 # Configuration
 batch_size = 128
-num_epochs = 50
+num_epochs = 10
 momentum = 0.9
 learning_rate = 0.001
 test_batch_size = 10000
 val_split = 0.1  # proportion of training data to use for validation
+
+n_workers = 32 if torch.cuda.is_available() else 0
 
 use_saved_model = True
 load_filename = "reddynetv1"
@@ -39,88 +43,6 @@ save_model = True
 save_filename = "reddynetv1"
 
 bar_refresh_rate = 1  # how often to compute loss for display
-
-
-class ReddyNetv1(nn.Module):
-    def __init__(self):
-        super().__init__()
-        # Layers
-        self.conv1 = nn.Conv2d(3, 32, 3)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(32, 64, 3)
-        self.conv3 = nn.Conv2d(64, 128, 3)
-        self.fc1 = nn.Linear(2 * 2 * 128, 128)
-        self.fc2 = nn.Linear(128, 10)
-
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
-        x = x.view(-1, 2 * 2 * 128)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-
-
-class CIFAR10Classifier(pl.LightningModule):
-    def __init__(self, backbone):
-        super().__init__()
-        # The actual neural network
-        self.backbone = backbone
-
-        # Things that need to be saved across training session
-        self.training_losses = []
-        self.validation_losses = []
-        self.validation_accuracies = []
-        self.overall_accuracy = None
-
-    def forward(self, x):
-        x = self.backbone(x)
-        return x
-
-    def configure_optimizers(self):
-        # return optim.Adam(self.parameters(), lr=0.001) # use for ReddyNet
-
-        optimizer = torch.optim.SGD(self.parameters(), lr=0.1,
-                                    momentum=0.9,
-                                    weight_decay=1e-4)
-
-        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-                                                            milestones=[15, 30], last_epoch=0 - 1)
-        return [optimizer], [lr_scheduler]
-
-    def training_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self.backbone(x)
-        loss = F.cross_entropy(y_hat, y)
-        self.training_losses.append(loss.cpu().detach().numpy())
-        return {'loss': loss}
-
-    def validation_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self.backbone(x)
-        loss = F.cross_entropy(y_hat, y)
-        self.validation_losses.append(loss.cpu().detach().numpy())
-        _, predicted_class = torch.max(y_hat, 1)
-        accuracy = torch.sum(predicted_class == y).cpu().detach().numpy() / y.size(0)
-        self.validation_accuracies.append(accuracy)
-        self.log('val_acc', accuracy, prog_bar=True)
-        return {'val_loss': loss}
-
-    def test_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self.backbone(x)
-        _, predicted_class = torch.max(y_hat, 1)
-        # Convert to numpy
-        y = y.cpu().detach().numpy()
-        predicted_class = predicted_class.cpu().detach().numpy()
-        # Compute accuracy
-        accuracy = np.sum(predicted_class == y) / len(y)
-        self.overall_accuracy = accuracy
-        print('Overall Accuracy: %.3f' % accuracy)
-        # Create a confusion matrix
-        cm_normalized = confusion_matrix(y, predicted_class, normalize='true')
-        self.cm = cm_normalized
 
 
 def plot_results(model):
@@ -182,23 +104,22 @@ trainset, valset = torch.utils.data.random_split(trainset_full, [int((1 - val_sp
                                                                  int(val_split * len(trainset_full))])
 
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                          shuffle=True, num_workers=0)
+                                          shuffle=True, num_workers=n_workers)
 valloader = torch.utils.data.DataLoader(valset, batch_size=len(valset),
-                                        shuffle=False, num_workers=0)
+                                        shuffle=False, num_workers=n_workers)
 
 testset = torchvision.datasets.CIFAR10(root="data", train=False,
                                        download=True, transform=test_transform)
 testloader = torch.utils.data.DataLoader(testset, batch_size=test_batch_size,
-                                         shuffle=False, num_workers=0)
+                                         shuffle=False, num_workers=n_workers)
 
 classes = ('plane', 'car', 'bird', 'cat',
            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-# net = CIFAR10Classifier(ReddyNetv1())
 net = CIFAR10Classifier(resnet20())
 
 if torch.cuda.is_available():
-    trainer = pl.Trainer(gpus=-1, max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)
+    trainer = pl.Trainer(gpus=-1, accelerator='ddp', max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)
 else:
     trainer = pl.Trainer(gpus=0, max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)
 
