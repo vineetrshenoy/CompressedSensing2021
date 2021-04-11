@@ -16,7 +16,7 @@ from utils import plot_results
 
 # Configuration
 batch_size = 128
-num_epochs = 10
+num_epochs = 1
 momentum = 0.9
 learning_rate = 0.001
 val_split = 0.1  # proportion of training data to use for validation
@@ -40,7 +40,7 @@ valloader = torch.utils.data.DataLoader(valset, batch_size=len(valset),
 
 testset = torchvision.datasets.FashionMNIST(root="data", train=False,
                                        download=True, transform=transforms.ToTensor())
-testloader = torch.utils.data.DataLoader(testset, batch_size=len(testset),
+testloader = torch.utils.data.DataLoader(testset, batch_size=1000,
                                          shuffle=False, num_workers=n_workers)
 
 net = MNISTClassifier(resnet20())
