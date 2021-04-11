@@ -69,8 +69,8 @@ class MNISTClassifier(pl.LightningModule):
         return n_correct, len(y)
 
     def test_epoch_end(self, test_step_outputs):
-        n_correct = np.sum(list(zip(*test_step_outputs)[0]))
-        testset_size = np.sum(list(zip(*test_step_outputs[1])))
+        n_correct = np.sum(list(zip(*test_step_outputs))[0])
+        testset_size = np.sum(list(zip(*test_step_outputs))[1])
 
         print("YOYO")
         print(type(test_step_outputs))
