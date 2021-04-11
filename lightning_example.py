@@ -28,18 +28,7 @@ bar_refresh_rate = 1  # how often to compute loss for display
 n_workers = 32 if torch.cuda.is_available() else 0
 
 # Dataset loading
-
-train_transform = transforms.Compose(
-    [transforms.RandomCrop(32, padding=4),
-     transforms.RandomHorizontalFlip(),
-     transforms.ToTensor(),
-     transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])])
-
-test_transform = transforms.Compose(
-    [transforms.ToTensor(),
-     transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])])
-
-trainset_full = torchvision.datasets.CIFAR10(root="data", train=True,
+trainset_full = torchvision.datasets.FashionMNIST(root="data", train=True,
                                              download=True, transform=transforms.ToTensor())
 
 trainset, valset = torch.utils.data.random_split(trainset_full, [int((1 - val_split) * len(trainset_full)),
@@ -50,7 +39,7 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
 valloader = torch.utils.data.DataLoader(valset, batch_size=len(valset),
                                         shuffle=False, num_workers=n_workers)
 
-testset = torchvision.datasets.CIFAR10(root="data", train=False,
+testset = torchvision.datasets.FashionMNIST(root="data", train=False,
                                        download=True, transform=transforms.ToTensor())
 testloader = torch.utils.data.DataLoader(testset, batch_size=test_batch_size,
                                          shuffle=False, num_workers=n_workers)
