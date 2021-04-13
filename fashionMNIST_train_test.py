@@ -10,7 +10,7 @@ import torchvision
 import torchvision.transforms as transforms
 import pytorch_lightning as pl
 from resnet import resnet20
-from Classifiers import MNISTClassifier
+from classifiers import MNISTClassifier
 
 from utils import plot_results
 
