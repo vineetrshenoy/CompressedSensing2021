@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Oct 28 23:23:59 2020
+This script trains and tests ResNet-20 on Fashion-MNIST
 
-@author: reddyav1
+Author(s): Arun Reddy
 """
 
 import torch
