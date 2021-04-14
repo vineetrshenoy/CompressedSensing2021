@@ -6,8 +6,8 @@ from resnet import resnet20
 from classifiers import MNISTClassifier
 import numpy as np
 
-# Path to that checkpoint you want to use for testing
-ckpt_path = "lightning_logs/version_2/checkpoints/epoch=24-step=5274.ckpt"
+# Path to the checkpoint you want to use for testing
+ckpt_path = "lightning_logs/version_0/checkpoints/epoch=24-step=5274.ckpt"
 
 # Crude way of determining if we're on CIS machine or laptop
 n_workers = 32 if torch.cuda.is_available() else 0
@@ -28,3 +28,5 @@ else:
     trainer = pl.Trainer(gpus=0)
 
 trainer.test(model=net, test_dataloaders=testloader)
+
+

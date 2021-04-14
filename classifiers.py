@@ -22,15 +22,14 @@ class MNISTClassifier(pl.LightningModule):
         return x
 
     def configure_optimizers(self):
-        # return torch.optim.Adam(self.parameters(), lr=0.001) # use for ReddyNet
-        # return torch.optim.Adadelta(self.parameters())
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.01)
 
-        optimizer = torch.optim.SGD(self.parameters(), lr=0.1,
-                                    momentum=0.9,
-                                    weight_decay=1e-4)
+        # optimizer = torch.optim.SGD(self.parameters(), lr=0.1,
+        #                             momentum=0.9,
+        #                             weight_decay=1e-4)
 
-        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-                                                            milestones=[15, 20], last_epoch=0 - 1)
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[8, 15], last_epoch=-1)
+        # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.85)
         return [optimizer], [lr_scheduler]
 
     def training_step(self, batch, batch_idx):
