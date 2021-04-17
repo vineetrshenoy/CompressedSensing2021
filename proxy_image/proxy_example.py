@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.linalg
 
+rng = np.random.default_rng(seed=21)
 # Read image
 img = cv2.imread("test_img.jpeg", cv2.IMREAD_GRAYSCALE)
 
@@ -21,12 +22,15 @@ img_vec = np.reshape(img, (N, 1))
 compression_factor = 0.1
 M = int(np.floor(compression_factor * N))
 
-A_gauss = (np.random.randn(M, N))
-# A_gauss = np.transpose(scipy.linalg.orth(np.transpose(A_gauss)))
+A_gauss = rng.standard_normal((M, N))
+A_gauss = np.transpose(scipy.linalg.orth(np.transpose(A_gauss)))
 # print(np.shape(A_gauss))
 y_gauss = np.matmul(A_gauss, img_vec)
 
 y_img = np.reshape(np.matmul(np.transpose(A_gauss), y_gauss), (im_dim[0], im_dim[1]))
+
+
+np.save('proxy.npy', y_img)
 
 plt.figure()
 plt.subplot(121)
