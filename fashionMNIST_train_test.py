@@ -19,10 +19,11 @@ from utils import plot_results
 # Configuration
 batch_size = 128
 num_epochs = 20
-momentum = 0.9
-learning_rate = 0.001
-val_split = 0.1  # proportion of training data to use for validation
+# momentum = 0.9
+lr = 0.01 # initial learning rate
+lr_milestones = [8, 15]
 
+val_split = 0.1  # proportion of training data to use for validation
 bar_refresh_rate = 1  # how often to compute loss for display
 
 # Crude way of determining if we're on CIS machine or laptop
@@ -47,7 +48,7 @@ testset = torchvision.datasets.FashionMNIST(root="data", train=False,
 testloader = torch.utils.data.DataLoader(testset, batch_size=1000,
                                          shuffle=False, num_workers=n_workers)
 
-net = MNISTClassifier(resnet20())
+net = MNISTClassifier(resnet20(), lr, lr_milestones)
 
 if torch.cuda.is_available():
     trainer = pl.Trainer(gpus=2, accelerator='ddp', max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)

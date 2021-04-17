@@ -6,10 +6,14 @@ from sklearn.metrics import confusion_matrix
 
 
 class MNISTClassifier(pl.LightningModule):
-    def __init__(self, backbone):
+    def __init__(self, backbone, lr, milestones):
         super().__init__()
         # The actual neural network
         self.backbone = backbone
+
+        # Hyperparameters
+        self.lr = lr
+        self.milestones = milestones
 
         # Things that need to be saved across training session
         self.training_losses = []
@@ -22,13 +26,13 @@ class MNISTClassifier(pl.LightningModule):
         return x
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.01)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
         # optimizer = torch.optim.SGD(self.parameters(), lr=0.1,
         #                             momentum=0.9,
         #                             weight_decay=1e-4)
 
-        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[8, 15], last_epoch=-1)
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=self.milestones, last_epoch=-1)
         # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.85)
         return [optimizer], [lr_scheduler]
 
