@@ -19,14 +19,14 @@ class RandomProjection(object):
 
         A = self.rng.standard_normal((int(M), N)) #sensing matrix
         A = np.transpose(scipy.linalg.orth(np.transpose(A)))
-        self.A = torch.from_numpy(A) 
+        self.A = torch.from_numpy(A).type(torch.FloatTensor) 
 
 
     def __call__(self, tensor):
 
         shape = tensor.shape
         x = torch.flatten(tensor, 1).transpose(0,1) #get image as vector
-        y = torch.matmul(self.A, x.type(torch.DoubleTensor)) #get measurements
+        y = torch.matmul(self.A, x.type(torch.FloatTensor)) #get measurements
 
         Atran = torch.transpose(self.A, 0, 1)
 
