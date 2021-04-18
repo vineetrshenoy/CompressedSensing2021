@@ -75,4 +75,6 @@ class MNISTClassifier(pl.LightningModule):
     def test_epoch_end(self, test_step_outputs):
         n_correct = np.sum(list(zip(*test_step_outputs))[0])
         testset_size = np.sum(list(zip(*test_step_outputs))[1])
-        self.log('test_accuracy', (n_correct / testset_size))
+        accuracy = (n_correct / testset_size)
+        self.log('test_accuracy', accuracy)
+        self.test_acc = accuracy

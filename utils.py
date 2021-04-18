@@ -2,6 +2,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import ConfusionMatrixDisplay
+from torchvision.datasets import FashionMNIST
+from torch.utils.data import random_split, DataLoader
 
 # MNIST class names
 # classes = tuple([str(x) for x in range(10)])
@@ -9,6 +11,21 @@ from sklearn.metrics import ConfusionMatrixDisplay
 # Fashion MNIST class names
 classes = ('T-Shirt', 'Trouser', 'Pullover', 'Dress', 'Coat',
            'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Boot')
+
+IM_DIM = (1, 28, 28)  # shape of MNIST images
+
+
+def get_dataloaders(batch_size, val_split, transforms, n_workers):
+    trainset_full = FashionMNIST(root="data", train=True, download=True, transform=transforms)
+    trainset, valset = random_split(trainset_full, [int((1 - val_split) * len(trainset_full)), int(val_split * len(trainset_full))])
+
+    trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=n_workers)
+    valloader = DataLoader(valset, batch_size=len(valset), shuffle=False, num_workers=n_workers)
+
+    testset = FashionMNIST(root="data", train=False, download=True, transform=transforms)
+    testloader = DataLoader(testset, batch_size=1000, shuffle=False, num_workers=n_workers)
+
+    return trainloader, valloader, testloader
 
 
 def plot_results(model):
