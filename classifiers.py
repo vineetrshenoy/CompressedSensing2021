@@ -19,7 +19,7 @@ class MNISTClassifier(pl.LightningModule):
         self.training_losses = []
         self.validation_losses = []
         self.validation_accuracies = []
-        self.overall_accuracy = None
+        self.test_acc = None
 
     def forward(self, x):
         x = self.backbone(x)
@@ -63,10 +63,8 @@ class MNISTClassifier(pl.LightningModule):
         predicted_class = predicted_class.cpu().detach().numpy()
         # Compute accuracy
         n_correct = np.sum(predicted_class == y)
-        accuracy = n_correct / len(y)
-        self.overall_accuracy = accuracy
-        # print('Overall Accuracy: %.3f' % accuracy)
         # Create a confusion matrix
+        # TODO: Move this to test_epoch_end and aggregate results from all test batches
         cm_normalized = confusion_matrix(y, predicted_class, normalize='true')
         self.cm = cm_normalized
 

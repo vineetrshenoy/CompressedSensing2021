@@ -13,7 +13,7 @@ from resnet import resnet20
 from classifiers import MNISTClassifier
 from sense import RandomProjection
 
-from utils import plot_results, get_dataloaders
+from utils import IM_DIM, plot_train_results, plot_results, get_dataloaders
 
 # Configuration
 batch_size = 128
@@ -28,11 +28,11 @@ bar_refresh_rate = 1  # how often to compute loss for display
 # Crude way of determining if we're on CIS machine or laptop
 n_workers = 32 if torch.cuda.is_available() else 0
 
-compression_factors = [1, 0.5]
+compression_factors = [1, 0.5, 0.25, 0.1, 0.05, 0.01]
 test_accuracy = []
 
 for i, cf in enumerate(compression_factors):
-    trans = transforms.Compose([transforms.ToTensor(), RandomProjection(cf, (1, 28, 28))])
+    trans = transforms.Compose([transforms.ToTensor(), RandomProjection(cf, IM_DIM)])
 
     # Dataset loading
     trainloader, valloader, testloader = get_dataloaders(batch_size, val_split, trans, n_workers)
@@ -48,6 +48,7 @@ for i, cf in enumerate(compression_factors):
     trainer.test(model=net, test_dataloaders=testloader)
 
     test_accuracy.append(net.test_acc)
-    # plot_results(net)
+    # plot_train_results(net)
 
 print(test_accuracy)
+plot_results(compression_factors, test_accuracy)

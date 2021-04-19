@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from resnet import resnet20
 from classifiers import MNISTClassifier
 import numpy as np
-from utils import plot_results
+from utils import plot_train_results
 
 # Path to the checkpoint you want to use for testing
 ckpt_path = "lightning_logs/version_10/checkpoints/epoch=19-step=4219.ckpt"
@@ -29,6 +29,6 @@ else:
     trainer = pl.Trainer(gpus=0)
 
 trainer.test(model=net, test_dataloaders=testloader)
-plot_results(net)
+plot_train_results(net)
 
 
