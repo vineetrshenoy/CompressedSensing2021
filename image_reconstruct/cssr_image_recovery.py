@@ -1,1 +1,137 @@
-{"metadata":{"kernelspec":{"language":"python","display_name":"Python 3","name":"python3"},"language_info":{"pygments_lexer":"ipython3","nbconvert_exporter":"python","version":"3.6.4","file_extension":".py","codemirror_mode":{"name":"ipython","version":3},"name":"python","mimetype":"text/x-python"}},"nbformat_minor":4,"nbformat":4,"cells":[{"cell_type":"code","source":"# %% [code]\n# This Python 3 environment comes with many helpful analytics libraries installed\n# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python\n# For example, here's several helpful packages to load\n\nimport numpy as np # linear algebra\nimport scipy\nimport scipy.linalg\nimport pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)\nimport torch\nimport torchvision\nimport torchvision.transforms as transforms\nimport pytorch_lightning as pl\nimport matplotlib.pyplot as plt\n\n# Input data files are available in the read-only \"../input/\" directory\n# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory\n\nimport os\nfor dirname, _, filenames in os.walk('/kaggle/input'):\n    for filename in filenames:\n        print(os.path.join(dirname, filename))\n\n# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using \"Save & Run All\" \n# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session\n\n# %% [code]\n# original credits go to:\n# https://github.com/rfmiotto/CoSaMP/blob/master/cosamp.ipynb\ndef cosamp(Phi, u, s, tol=1e-10, max_iter=1000):\n    \"\"\"\n    @Brief:  \"CoSaMP: Iterative signal recovery from incomplete and inaccurate\n             samples\" by Deanna Needell & Joel Tropp\n\n    @Input:  Phi - Sampling matrix\n             u   - Noisy sample vector\n             s   - Sparsity vector\n\n    @Return: A s-sparse approximation \"a\" of the target signal\n    \"\"\"\n    max_iter -= 1 # Correct the while loop\n    num_precision = 1e-12\n    a = torch.Tensor( (Phi.shape[1]) )\n    v = u\n    iter = 0\n    halt = False\n    while not halt:\n        iter += 1\n#         print(\"Iteration {}\\r\".format(iter))\n#         print(v.shape)\n        y = abs(torch.matmul( (torch.transpose(Phi,0,1)), v))\n        Omega = [i for (i, val) in enumerate(y) if val > torch.sort(y)[::-1][2*s] and val > num_precision] # quivalent to below\n        #Omega = np.argwhere(y >= np.sort(y)[::-1][2*s] and y > num_precision)\n        T = np.union1d(Omega, a.nonzero()[0])\n        #T = np.union1d(Omega, T)\n        b = np.dot( np.linalg.pinv(Phi[:,T]), u )\n        igood = (abs(b) > np.sort(abs(b))[::-1][s]) & (abs(b) > num_precision)\n        T = T[igood]\n        a[T] = b[igood]\n        v = u - np.dot(Phi[:,T], b[igood])\n        \n        halt = np.linalg.norm(v)/np.linalg.norm(u) < tol or \\\n               iter > max_iter\n        \n    return a\n\n# %% [code]\ntrainset_full = torchvision.datasets.FashionMNIST(root=\"data\", train=True,\n                                             download=True, transform=transforms.ToTensor())\n\n# m_val = 50\n# N = 28*28\n# Random Rows Matrix\n# A = np.eye(N)\n# shuffled_vals = np.random.permutation(N)\n# A = A[shuffled_vals[:m_val],:]\n\n# %% [code]\ncompression_factor = 0.1\ncurr_seed = np.random.default_rng(seed=21) #Set RNG for repeatble results\n\nN =  28*28 #length of vectorized image\nm_val = int(compression_factor * N)\n\nA = curr_seed.standard_normal(((m_val), N)) #sensing matrix\nA = np.transpose(scipy.linalg.orth(np.transpose(A)))\nA = torch.from_numpy(A).type(torch.FloatTensor) \n\n# %% [code]\n\n\n# %% [code]\nims=trainset_full.data\nlabs = trainset_full.targets\nims_compressed = torch.Tensor(60,m_val)\nfor i in range(60): # np.size(ims,0)\n    temp = torch.reshape(ims[i,:,:],(28*28,)).type(torch.FloatTensor) \n    ims_compressed[i,:]= torch.matmul(A, temp)\n\n\n# %% [code]\nims_compressed[1,:].shape\n\n# %% [code]\ntorch.transpose(A,0,1)\n\n# %% [code]\ny = ims_compressed[0,:]\nidk = cosamp(A,y, 20) \nprint(np.size(idk))\n\n# %% [code]\ntest_im = np.reshape(idk,(28,28))\nplt.imshow(test_im)\n\n# %% [code]\nfor i in range(np.size(ims_compressed,0)):\n    y = ims_compressed[i,:]\n    idk = cosamp(A,y, 20) #?!?!?!?!!??!?!?!?!?!?!?!?!?!?!?!\n\n# %% [code]\nprint(np.size(ims,0))\n\n# %% [code]\nprint(labs[2])\nplt.imshow(ims[2,:,:])\n\n# %% [code]\n\n\n# %% [code]\nfunction recovered_ims = meas2recovery():\n\n\n# %% [code]\noutputs = ims_compressed[0,0:5]\nlabels = ims_compressed[1,0:5]\nprint(outputs)\nprint(labels)\nunion = (outputs | labels).float().sum((1, 2))\nprint(union)\n\n# %% [code]\n","metadata":{"_uuid":"94751193-b885-47dc-9a26-05692fc6c910","_cell_guid":"3f1f49e4-8a5c-479f-b06a-e8f7f3e4bd8e","collapsed":false,"jupyter":{"outputs_hidden":false},"trusted":true},"execution_count":null,"outputs":[]}]}
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+# This Python 3 environment comes with many helpful analytics libraries installed
+# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python
+# For example, here's several helpful packages to load
+
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import torch
+import torchvision
+import torchvision.transforms as transforms
+import pytorch_lightning as pl
+import matplotlib.pyplot as plt
+import scipy
+import scipy.linalg
+import time
+
+# Input data files are available in the read-only "../input/" directory
+# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory
+
+import os
+for dirname, _, filenames in os.walk('/kaggle/input'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+
+# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using "Save & Run All" 
+# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+
+# credits go to:
+# https://github.com/rfmiotto/CoSaMP/blob/master/cosamp.ipynb
+def cosamp(Phi, u, s, tol=1e-10, max_iter=1000):
+    """
+    @Brief:  "CoSaMP: Iterative signal recovery from incomplete and inaccurate
+             samples" by Deanna Needell & Joel Tropp
+
+    @Input:  Phi - Sampling matrix
+             u   - Noisy sample vector
+             s   - Sparsity vector
+
+    @Return: A s-sparse approximation "a" of the target signal
+    """
+    max_iter -= 1 # Correct the while loop
+    num_precision = 1e-12
+    a = np.zeros(Phi.shape[1])
+    v = u
+    iter = 0
+    halt = False
+    while not halt:
+        iter += 1
+#         print("Iteration {}\r".format(iter))
+        
+        y = abs(np.dot(np.transpose(Phi), v))
+        Omega = [i for (i, val) in enumerate(y) if val > np.sort(y)[::-1][2*s] and val > num_precision] # quivalent to below
+        #Omega = np.argwhere(y >= np.sort(y)[::-1][2*s] and y > num_precision)
+        T = np.union1d(Omega, a.nonzero()[0])
+        #T = np.union1d(Omega, T)
+        b = np.dot( np.linalg.pinv(Phi[:,T]), u )
+        igood = (abs(b) > np.sort(abs(b))[::-1][s]) & (abs(b) > num_precision)
+        T = T[igood]
+        a[T] = b[igood]
+        v = u - np.dot(Phi[:,T], b[igood])
+        
+        halt = np.linalg.norm(v)/np.linalg.norm(u) < tol or \
+               iter > max_iter
+        
+    return a
+
+
+# %% [code]
+def produce_gaussian_sampling(compression_factor, img_shp): #based of Vineet's RandomProjection object in sense.py
+        rng1 = np.random.default_rng(seed=21) #Set RNG for repeatble results
+        N =  img_shp[0] *img_shp[1] #length of vectorized image
+        M = int(compression_factor * N)
+
+        A = rng1.standard_normal(( (M), N)) #sensing matrix
+        A = np.transpose(scipy.linalg.orth(np.transpose(A)))
+        return A, M
+
+# %% [code]
+def run_cosamp_on_batch(ims, c_factor, s_val ):
+    num_samples = ims.shape[0]
+    ims_compressed = np.empty((num_samples, int(c_factor*28*28) ))
+    recovered_ims = np.empty((num_samples, 28, 28))
+    for i in range(num_samples):        
+        A, M = produce_gaussian_sampling(c_factor, (28,28))
+        temp = ims[i,:,:]
+        temp = np.reshape(temp, (28*28))
+        ims_compressed[i,:]= np.matmul(A, temp)
+        
+        
+#         rec = cosamp(A, ims_compressed[i,:], s_val) 
+#         recovered_ims[i,:,:] = np.reshape( rec ,(28,28))
+
+    
+    return ims_compressed, recovered_ims
+
+# %% [code]
+## ALSO NEED TO ADD SOME WAY OF CHECKING ACCURACY LIKE THEIR MODEL DOES 
+
+# %% [code]
+trainset_full = torchvision.datasets.FashionMNIST(root="data", train=True,
+                                             download=True, transform=transforms.ToTensor())
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+ims = trainset_full.data.numpy()
+labs = trainset_full.targets.numpy()
+# ims_compressed = np.empty((60,m_val))
+# for i in range(60): # np.size(ims,0)
+#     temp = np.reshape(ims[i,:,:],(28*28))
+#     ims_compressed[i,:]= np.matmul(A, temp)
+#     y = ims_compressed[0,:]
+#     recovered = cosamp(A,y, 20) 
+#     print(np.size(idk))
+
+# %% [code]
+init = time.time()
+run_cosamp_on_batch(ims[:20,:,:], 0.5, 40)
+end = time.time()
+print( (end-init)/60 )
+
+# SCRATCH WORK:
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+ims_compressed.shape
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+test_im = np.reshape(idk,(28,28))
+plt.imshow(test_im)
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
