@@ -66,11 +66,60 @@ class RSTD(CSTransform): #Random Sampling Time Domain
         
         self.A = np.eye(self.N)
         all_idx = np.arange(0, self.N, 1)
-        idx = self.rng.integers(0, self.N, (self.M,), endpoint=True)
+        idx = self.rng.choice(self.N, self.M, replace=False)
         dif = np.setdiff1d(all_idx, idx)
         self.A[dif, :] = 0
         self.A = torch.from_numpy(self.A).type(torch.FloatTensor)
+
+        temp = np.eye(self.N)
+        self.temp = temp[idx, :]
+        self.temp = torch.from_numpy(self.temp).type(torch.FloatTensor)
+        '''
+        ort = np.transpose(scipy.linalg.orth(np.transpose(self.temp)))
+
+        #returns false, locations of nonzero are same, but not values
+        flag = np.array_equal(self.temp, ort) 
+        
+        temp_nz = np.nonzero(self.temp)
+        ort_nz = np.nonzero(ort)
+
+        print(self.temp[temp_nz[0][0], temp_nz[1][0]])
+        print(ort[ort_nz[0][0], ort_nz[1][0]])
+
+        
+        '''
+    def __call__(self, tensor):
+
+        shape = tensor.shape
+        x = torch.flatten(tensor, 1).transpose(0,1) #get image as vector
+        y = torch.matmul(self.A, x.type(torch.FloatTensor)) #get measurements
+        y_temp = torch.matmul(self.temp, x.type(torch.FloatTensor))
+        
+        img_temp =  torch.matmul(torch.transpose(self.temp, 0, 1), y_temp) 
+        img_temp = torch.reshape(img_temp, shape)
+        img = torch.reshape(y, shape)
+
+        return img_temp
     
+    
+    
+    '''
+    def __call__(self, tensor):
+
+        shape = tensor.shape
+        x = torch.flatten(tensor, 1).transpose(0,1) #get image as vector
+        y = torch.matmul(self.A, x.type(torch.FloatTensor)) #get measurements
+        y_temp = torch.matmul(self.temp, x.type(torch.FloatTensor))
+        
+        img_temp =  torch.matmul(torch.transpose(self.temp, 0, 1), y_temp) 
+        img_temp = torch.reshape(img_temp, shape)
+        img = torch.reshape(y, shape)
+
+        find_dif = torch.eq(img, img_temp)
+        print(find_dif.sum()) #same length as img and img_temp, exactly the same
+        
+        return img
+    '''
 
 
 class USTD(CSTransform): #Uniform Sampling Time Domain
@@ -98,7 +147,7 @@ class RSFD(CSTransform): #Random Sampling Frequency Domain
         
         self.A = scipy.fft.dct(np.eye(self.N))
         all_idx = np.arange(0, self.N, 1)
-        idx = self.rng.integers(0, self.N, (self.M,), endpoint=True)
+        idx = self.rng.choice(self.N, self.M, replace=False)
         dif = np.setdiff1d(all_idx, idx)
         self.A[dif, :] = 0
         self.A = torch.from_numpy(self.A).type(torch.FloatTensor)
