@@ -11,7 +11,7 @@ import torchvision.transforms as transforms
 import pytorch_lightning as pl
 from resnet import resnet20
 from classifiers import MNISTClassifier
-from sense import RandomProjection
+from sense import RandomProjection, RSTD, USTD, RSFD, LFS, EFS
 
 from utils import IM_DIM, plot_train_results, plot_results, get_dataloaders
 
