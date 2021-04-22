@@ -29,7 +29,7 @@ bar_refresh_rate = 1  # how often to compute loss for display
 # Crude way of determining if we're on CIS machine or laptop
 n_workers = 32 if torch.cuda.is_available() else 0
 
-trans = transforms.Compose([transforms.ToTensor(), LFS(0.5, (1, 28, 28))])
+trans = transforms.Compose([transforms.ToTensor(), RSTD(0.5, (1, 28, 28))])
 
 # Dataset loading
 trainset_full = torchvision.datasets.FashionMNIST(root="data", train=True,

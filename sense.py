@@ -27,16 +27,14 @@ class CSTransform(object):
         
         return img
 
-class RandomProjection(object):
+class RandomProjection(CSTransform):
 
 
     def __init__(self, compression_factor, img_shp):
         
-        self.rng = np.random.default_rng(seed=21) #Set RNG for repeatble results
-        N =  img_shp[1] *img_shp[2] #length of vectorized image
-        M = compression_factor * N
+        super().__init__(compression_factor, img_shp)
 
-        A = self.rng.standard_normal((int(M), N)) #sensing matrix
+        A = self.rng.standard_normal((int(self.M), self.N)) #sensing matrix
         A = np.transpose(scipy.linalg.orth(np.transpose(A)))
         self.A = torch.from_numpy(A).type(torch.FloatTensor) 
 
@@ -71,19 +69,19 @@ class RSTD(CSTransform): #Random Sampling Time Domain
         self.A[dif, :] = 0
         self.A = torch.from_numpy(self.A).type(torch.FloatTensor)
 
-        temp = np.eye(self.N)
-        self.temp = temp[idx, :]
-        self.temp = torch.from_numpy(self.temp).type(torch.FloatTensor)
+        measmat = np.eye(self.N)
+        self.measmat = measmat[idx, :]
+        self.measmat = torch.from_numpy(self.measmat).type(torch.FloatTensor)
         '''
-        ort = np.transpose(scipy.linalg.orth(np.transpose(self.temp)))
+        ort = np.transpose(scipy.linalg.orth(np.transpose(self.measmat)))
 
         #returns false, locations of nonzero are same, but not values
-        flag = np.array_equal(self.temp, ort) 
+        flag = np.array_equal(self.measmat, ort) 
         
-        temp_nz = np.nonzero(self.temp)
+        measmat_nz = np.nonzero(self.measmat)
         ort_nz = np.nonzero(ort)
 
-        print(self.temp[temp_nz[0][0], temp_nz[1][0]])
+        print(self.measmat[measmat_nz[0][0], measmat_nz[1][0]])
         print(ort[ort_nz[0][0], ort_nz[1][0]])
 
         
@@ -93,13 +91,13 @@ class RSTD(CSTransform): #Random Sampling Time Domain
         shape = tensor.shape
         x = torch.flatten(tensor, 1).transpose(0,1) #get image as vector
         y = torch.matmul(self.A, x.type(torch.FloatTensor)) #get measurements
-        y_temp = torch.matmul(self.temp, x.type(torch.FloatTensor))
+        y_measmat = torch.matmul(self.measmat, x.type(torch.FloatTensor))
         
-        img_temp =  torch.matmul(torch.transpose(self.temp, 0, 1), y_temp) 
-        img_temp = torch.reshape(img_temp, shape)
-        img = torch.reshape(y, shape)
+        img_measmat =  torch.matmul(torch.transpose(self.measmat, 0, 1), y_measmat) 
+        img_measmat = torch.reshape(img_measmat, shape)
+        #img = torch.reshape(y, shape)
 
-        return img_temp
+        return img_measmat
     
     
     
