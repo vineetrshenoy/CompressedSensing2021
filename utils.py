@@ -2,6 +2,12 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import ConfusionMatrixDisplay
+from torchvision.datasets import FashionMNIST
+from torch.utils.data import random_split, DataLoader
+import seaborn as sns
+sns.set_theme()
+
+DPI = 300  # dpi for saving figures
 
 # MNIST class names
 # classes = tuple([str(x) for x in range(10)])
@@ -10,8 +16,43 @@ from sklearn.metrics import ConfusionMatrixDisplay
 classes = ('T-Shirt', 'Trouser', 'Pullover', 'Dress', 'Coat',
            'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Boot')
 
+IM_DIM = (1, 28, 28)  # shape of MNIST images
+N = IM_DIM[1]*IM_DIM[2]
 
-def plot_results(model):
+
+def get_dataloaders(batch_size, val_split, transforms, n_workers):
+    trainset_full = FashionMNIST(root="data", train=True, download=True, transform=transforms)
+    trainset, valset = random_split(trainset_full, [int((1 - val_split) * len(trainset_full)), int(val_split * len(trainset_full))])
+
+    trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=n_workers)
+    valloader = DataLoader(valset, batch_size=len(valset), shuffle=False, num_workers=n_workers)
+
+    testset = FashionMNIST(root="data", train=False, download=True, transform=transforms)
+    testloader = DataLoader(testset, batch_size=1000, shuffle=False, num_workers=n_workers)
+
+    return trainloader, valloader, testloader
+
+
+def plot_results(compression_factors, test_accuracy):
+    plt.figure()
+    x_vals = ["{cf}\n(M={M})".format(cf=cf, M=int(N*cf)) for cf in compression_factors]
+    sns.barplot(x=x_vals, y=[test_acc * 100 for test_acc in test_accuracy])
+    plt.ylim(0, 100)
+    plt.xlabel("Compression Factor\n(Measurement Size)")
+    plt.ylabel("Test Accuracy (%)")
+    plt.title("Test Accuracy by Compression Factor\n(Gaussian Sensing)")
+    plt.tight_layout()
+    # TODO: Add accuracy value labels on bar plot
+
+    # Save figure
+    if not (os.path.isdir("outputs")):
+        os.mkdir("outputs")
+    plt.savefig("outputs/accuracy_across_cf.png", dpi=DPI)
+
+    plt.show()
+
+
+def plot_train_results(model):
     if not (os.path.isdir("outputs")):
         os.mkdir("outputs")
     # Plot validation accuracy and loss on a single plot
@@ -39,7 +80,7 @@ def plot_results(model):
     ax3.grid(True)
 
     fig.tight_layout()
-    plt.savefig("outputs/training_plot.png", dpi=250)
+    plt.savefig("outputs/training_plot.png", dpi=DPI)
     plt.show()
 
     # Plot confusion matrix
@@ -47,5 +88,5 @@ def plot_results(model):
     plt.rcParams.update({'font.size': 5})
     cm_plot = ConfusionMatrixDisplay(confusion_matrix=model.cm, display_labels=classes)
     cm_plot.plot(cmap=plt.cm.Blues)
-    plt.title('Confusion Matrix (Total Accuracy = %.3f%%)' % (100 * model.overall_accuracy))
-    plt.savefig("outputs/confusion_matrix.png", dpi=250)
+    plt.title('Confusion Matrix (Total Accuracy = %.3f%%)' % (100 * model.test_acc))
+    plt.savefig("outputs/confusion_matrix.png", dpi=DPI)
