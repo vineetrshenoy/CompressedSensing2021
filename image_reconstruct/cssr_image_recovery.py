@@ -1,7 +1,9 @@
 # %% [code] {"jupyter":{"outputs_hidden":false}}
-# This Python 3 environment comes with many helpful analytics libraries installed
-# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python
-# For example, here's several helpful packages to load
+# Documentation for SPAMS
+# http://spams-devel.gforge.inria.fr/doc-python/html/doc_spams005.html#sec12
+!pip install spams
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
 
 import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
@@ -13,6 +15,9 @@ import matplotlib.pyplot as plt
 import scipy
 import scipy.linalg
 import time
+from scipy.fftpack import dct
+
+import spams
 
 # Input data files are available in the read-only "../input/" directory
 # For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory
@@ -26,49 +31,11 @@ for dirname, _, filenames in os.walk('/kaggle/input'):
 # You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session
 
 # %% [code] {"jupyter":{"outputs_hidden":false}}
+trainset_full = torchvision.datasets.FashionMNIST(root="data", train=True,
+                                             download=True, transform=transforms.ToTensor())
 
-# credits go to:
-# https://github.com/rfmiotto/CoSaMP/blob/master/cosamp.ipynb
-def cosamp(Phi, u, s, tol=1e-10, max_iter=1000):
-    """
-    @Brief:  "CoSaMP: Iterative signal recovery from incomplete and inaccurate
-             samples" by Deanna Needell & Joel Tropp
-
-    @Input:  Phi - Sampling matrix
-             u   - Noisy sample vector
-             s   - Sparsity vector
-
-    @Return: A s-sparse approximation "a" of the target signal
-    """
-    max_iter -= 1 # Correct the while loop
-    num_precision = 1e-12
-    a = np.zeros(Phi.shape[1])
-    v = u
-    iter = 0
-    halt = False
-    while not halt:
-        iter += 1
-#         print("Iteration {}\r".format(iter))
-        
-        y = abs(np.dot(np.transpose(Phi), v))
-        Omega = [i for (i, val) in enumerate(y) if val > np.sort(y)[::-1][2*s] and val > num_precision] # quivalent to below
-        #Omega = np.argwhere(y >= np.sort(y)[::-1][2*s] and y > num_precision)
-        T = np.union1d(Omega, a.nonzero()[0])
-        #T = np.union1d(Omega, T)
-        b = np.dot( np.linalg.pinv(Phi[:,T]), u )
-        igood = (abs(b) > np.sort(abs(b))[::-1][s]) & (abs(b) > num_precision)
-        T = T[igood]
-        a[T] = b[igood]
-        v = u - np.dot(Phi[:,T], b[igood])
-        
-        halt = np.linalg.norm(v)/np.linalg.norm(u) < tol or \
-               iter > max_iter
-        
-    return a
-
-
-# %% [code]
-def produce_gaussian_sampling(compression_factor, img_shp): #based of Vineet's RandomProjection object in sense.py
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+def produce_gaussian_sampling(compression_factor, img_shp): #based off Vineet's RandomProjection object in sense.py
         rng1 = np.random.default_rng(seed=21) #Set RNG for repeatble results
         N =  img_shp[0] *img_shp[1] #length of vectorized image
         M = int(compression_factor * N)
@@ -78,60 +45,67 @@ def produce_gaussian_sampling(compression_factor, img_shp): #based of Vineet's R
         return A, M
 
 # %% [code]
-def run_cosamp_on_batch(ims, c_factor, s_val ):
+def speed_run_omp_on_batch(ims, c_factor, S ):
     num_samples = ims.shape[0]
-    ims_compressed = np.empty((num_samples, int(c_factor*28*28) ))
+    
     recovered_ims = np.empty((num_samples, 28, 28))
-    for i in range(num_samples):        
-        A, M = produce_gaussian_sampling(c_factor, (28,28))
+    D = dct(np.eye(28*28), axis=0)
+    A, M = produce_gaussian_sampling(c_factor, (28,28))
+    currA = ( np.matmul(A,D)  )
+    currA = currA/ np.tile(np.sqrt((currA*currA).sum(axis=0)),(currA.shape[0],1))
+    currA = np.asfortranarray(currA)
+    ims_compressed = np.empty((M, num_samples ))
+    
+    for i in range(num_samples):              
+
         temp = ims[i,:,:]
         temp = np.reshape(temp, (28*28))
-        ims_compressed[i,:]= np.matmul(A, temp)
+        temp = np.matmul(A, temp) 
+        ims_compressed[:,i]= temp
         
-        
-#         rec = cosamp(A, ims_compressed[i,:], s_val) 
-#         recovered_ims[i,:,:] = np.reshape( rec ,(28,28))
+    ims_compressed = np.asfortranarray(ims_compressed)
+    rec_all = spams.omp(X= ims_compressed, D=currA, L=S)
+    
+    for j in range(num_samples):
+        rec = rec_all[:,j].toarray()
+        rec = rec.flatten()
+        rec = np.matmul(D,rec);
+        recovered_ims[j,:,:] = np.reshape( rec ,(28,28))
 
     
     return ims_compressed, recovered_ims
 
-# %% [code]
-## ALSO NEED TO ADD SOME WAY OF CHECKING ACCURACY LIKE THEIR MODEL DOES 
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+## ALSO NEED TO ADD SOME WAY OF CHECKING ACCURACY LIKE THEIR MODEL DOES
 
-# %% [code]
-trainset_full = torchvision.datasets.FashionMNIST(root="data", train=True,
-                                             download=True, transform=transforms.ToTensor())
+# %% [code] {"jupyter":{"outputs_hidden":false},"_kg_hide-output":true,"_kg_hide-input":true}
+
 
 # %% [code] {"jupyter":{"outputs_hidden":false}}
 ims = trainset_full.data.numpy()
 labs = trainset_full.targets.numpy()
-# ims_compressed = np.empty((60,m_val))
-# for i in range(60): # np.size(ims,0)
-#     temp = np.reshape(ims[i,:,:],(28*28))
-#     ims_compressed[i,:]= np.matmul(A, temp)
-#     y = ims_compressed[0,:]
-#     recovered = cosamp(A,y, 20) 
-#     print(np.size(idk))
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+
 
 # %% [code]
 init = time.time()
-run_cosamp_on_batch(ims[:20,:,:], 0.5, 40)
+[compressed, recovered] = speed_run_omp_on_batch(ims[:1000,:,:], .5, 50)
 end = time.time()
-print( (end-init)/60 )
+print( (end-init) )
 
-# SCRATCH WORK:
-
-# %% [code] {"jupyter":{"outputs_hidden":false}}
-ims_compressed.shape
-
-# %% [code] {"jupyter":{"outputs_hidden":false}}
-
-
-# %% [code] {"jupyter":{"outputs_hidden":false}}
-
-
-# %% [code] {"jupyter":{"outputs_hidden":false}}
-test_im = np.reshape(idk,(28,28))
+# %% [code]
+test_im = np.reshape(recovered[1,:,:],(28,28))
 plt.imshow(test_im)
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+test_im = np.reshape(recovered[0,:,:],(28,28))
+plt.imshow(test_im)
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+
+
+# %% [code] {"jupyter":{"outputs_hidden":false}}
+
 
 # %% [code] {"jupyter":{"outputs_hidden":false}}
