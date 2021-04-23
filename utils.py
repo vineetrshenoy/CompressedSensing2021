@@ -2,8 +2,11 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import ConfusionMatrixDisplay
+import torchvision.transforms as transforms
 from torchvision.datasets import FashionMNIST
 from torch.utils.data import random_split, DataLoader
+from math import log10, sqrt
+import spams
 import seaborn as sns
 sns.set_theme()
 
@@ -19,6 +22,98 @@ classes = ('T-Shirt', 'Trouser', 'Pullover', 'Dress', 'Coat',
 IM_DIM = (1, 28, 28)  # shape of MNIST images
 N = IM_DIM[1]*IM_DIM[2]
 
+
+# Inputs:
+# ims: numpy array of the dataset
+# S: the sparsity value to call in OMP, must be less than (28*28)
+# A: the Torch matrix to use to compress the images
+# Outputs:
+# ims_compressed: the Torch matrix of compressed image data
+# recovered_ims: the Torch dataset of sparsely recovered images
+def speed_run_omp_on_batch(ims, S, A ):
+    num_samples = ims.shape[0]
+    M = A.shape[0]
+    recovered_ims = np.empty((num_samples, 28, 28))
+    D = dct(np.eye(28*28), axis=0)
+    currA = ( np.matmul( A.numpy(), D)  )
+    currA = currA/ np.tile(np.sqrt((currA*currA).sum(axis=0)),(currA.shape[0],1))
+    currA = np.asfortranarray(currA)
+    ims_compressed = np.empty((M, num_samples ))
+    
+    for i in range(num_samples):
+        temp = ims[i,:,:]
+        temp = np.reshape(temp, (28*28))
+        temp = np.matmul(A, temp) 
+        ims_compressed[:,i]= temp
+        
+    ims_compressed = np.asfortranarray(ims_compressed)
+    rec_all = spams.omp(X= ims_compressed, D=currA, L=S)
+    
+    for j in range(num_samples):
+        rec = rec_all[:,j].toarray()
+        rec = rec.flatten()
+        rec = np.matmul(D,rec);
+        recovered_ims[j,:,:] = np.reshape( rec ,(28,28))
+        
+    ims_compressed = torch.from_numpy(ims_compressed)
+    recovered_ims = torch.from_numpy(recovered_ims)
+    
+    return ims_compressed, recovered_ims
+
+
+def PSNR(original, compressed): #credits to https://www.geeksforgeeks.org/python-peak-signal-to-noise-ratio-psnr/
+    mse = np.mean((original - compressed) ** 2)
+    if(mse == 0):  
+        return np.NAN
+    max_pixel = 255.0
+    psnr = 10 * log10(max_pixel / sqrt(mse))
+    return psnr
+
+# Inputs
+# og: original MNIST dataset in numpy
+# rec: recovered dataset in numpy
+# Outputs
+# psnr_vals: a numpy array of psnr values corresponding to reconstructed images
+def compute_psnr_on_datasets(og, rec):
+    psnr_vals = np.empty((og.shape[0]))
+    for i in range(og.shape[0]):
+        im1 = np.squeeze(og[i,:,:])
+        im2 = np.squeeze(rec[i,:,:])
+        psnr_vals[i] = PSNR(im1,im2)
+        
+    return psnr_vals
+
+
+# very similar to get_dataloaders
+# New Inputs:
+# trans: the object outputted by a function like RandomProjection
+# S: the sparsity value to call in OMP, must be less than (28*28)
+# New Output:
+# psnr_recovered: the array of psnr recovered corresponding to each recovered image
+def get_sparse_recovered_dataloaders(trans, S, batch_size, val_split,  n_workers):
+    A = trans.A
+    ts_full = FashionMNIST(root="data", train=True, download=True,  transform=transforms.ToTensor() )
+    trainset_full = ts_full
+    ims = ts_full.data.numpy()
+
+    init = time.time()
+    [compressed, recovered] = speed_run_omp_on_batch(ims, S,A)
+    trainset_full.data = recovered
+    end = time.time()
+
+    print("Time of Sparse Recovery (s):")
+    print( (end-init) )
+    psnr_recovered = compute_psnr_on_datasets(ims,recovered.numpy())
+
+    trainset, valset = random_split(trainset_full, [int((1 - val_split) * len(trainset_full)), int(val_split * len(trainset_full))])
+
+    trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=n_workers)
+    valloader = DataLoader(valset, batch_size=len(valset), shuffle=False, num_workers=n_workers)
+
+    testset = FashionMNIST(root="data", train=False, download=True,  transform=transforms.ToTensor())
+    testloader = DataLoader(testset, batch_size=1000, shuffle=False, num_workers=n_workers)
+
+    return trainloader, valloader, testloader, psnr_recovered
 
 def get_dataloaders(batch_size, val_split, transforms, n_workers):
     trainset_full = FashionMNIST(root="data", train=True, download=True, transform=transforms)
