@@ -33,21 +33,27 @@ def get_dataloaders(batch_size, val_split, transforms, n_workers):
     return trainloader, valloader, testloader
 
 
-def plot_results(compression_factors, test_accuracy):
+def plot_results(compression_factors, test_accuracies, scheme_names):
+    for n in range(test_accuracies.shape[0]):
+        make_cf_barplot(compression_factors, test_accuracies[n, :], scheme_names[n])
+
+
+def make_cf_barplot(compression_factors, test_accuracy, scheme_name):
     plt.figure()
-    x_vals = ["{cf}\n(M={M})".format(cf=cf, M=int(N*cf)) for cf in compression_factors]
+    x_vals = ["{cf}%\n(M={M})".format(cf=cf * 100, M=int(N*cf)) for cf in compression_factors]
     sns.barplot(x=x_vals, y=[test_acc * 100 for test_acc in test_accuracy])
     plt.ylim(0, 100)
     plt.xlabel("Compression Factor\n(Measurement Size)")
     plt.ylabel("Test Accuracy (%)")
-    plt.title("Test Accuracy by Compression Factor\n(Gaussian Sensing)")
+    plt.title("Test Accuracy by Compression Factor\n({ss})".format(ss=scheme_name))
     plt.tight_layout()
     # TODO: Add accuracy value labels on bar plot
 
     # Save figure
     if not (os.path.isdir("outputs")):
         os.mkdir("outputs")
-    plt.savefig("outputs/accuracy_across_cf.png", dpi=DPI)
+    fig_path = "outputs/accuracy_across_cf_{ss}.png".format(ss=scheme_name.replace(' ', '_'))
+    plt.savefig(fig_path, dpi=DPI)
 
     plt.show()
 
