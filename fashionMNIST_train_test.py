@@ -14,7 +14,7 @@ from classifiers import MNISTClassifier
 from sense import RandomProjection, RSTD, USTD, RSFD, LFS, EFS
 import numpy as np
 
-from utils import IM_DIM, plot_train_results, plot_results, get_dataloaders
+from utils import IM_DIM, plot_train_results, plot_results, get_dataloaders, get_sparse_recovered_dataloaders
 
 # Configuration
 batch_size = 128
@@ -31,7 +31,7 @@ n_workers = 32 if torch.cuda.is_available() else 0
 compression_factors = [1, 0.5, 0.25, 0.1, 0.05, 0.01]
 sensing_schemes = [RandomProjection, RSTD]
 scheme_names = ["Gaussian Sensing", "Random Subsampling"]
-
+S = 20
 test_accuracy = np.zeros((len(sensing_schemes), len(compression_factors)))
 
 # Loop over sensing schemes and compression factors
@@ -42,7 +42,8 @@ for i, ss in enumerate(sensing_schemes):
         trans = transforms.Compose([transforms.ToTensor(), sensing_transform])
 
         # Build the dataloaders
-        trainloader, valloader, testloader = get_dataloaders(batch_size, val_split, trans, n_workers)
+        # trainloader, valloader, testloader = get_dataloaders(batch_size, val_split, trans, n_workers)
+        trainloader, valloader, testloader, _ = get_sparse_recovered_dataloaders(sensing_transform, S, batch_size, val_split, n_workers)
         # Construct the model
         net = MNISTClassifier(resnet20(), lr, lr_milestones)
 

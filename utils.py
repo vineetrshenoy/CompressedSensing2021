@@ -2,12 +2,14 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import ConfusionMatrixDisplay
+import torch
 import torchvision.transforms as transforms
 from torchvision.datasets import FashionMNIST
 from torch.utils.data import random_split, DataLoader
 from math import log10, sqrt
 import spams
 import seaborn as sns
+from scipy.fftpack import dct
 sns.set_theme()
 
 DPI = 300  # dpi for saving figures
@@ -96,13 +98,13 @@ def get_sparse_recovered_dataloaders(trans, S, batch_size, val_split,  n_workers
     trainset_full = ts_full
     ims = ts_full.data.numpy()
 
-    init = time.time()
+    # init = time.time()
     [compressed, recovered] = speed_run_omp_on_batch(ims, S,A)
     trainset_full.data = recovered
-    end = time.time()
+    # end = time.time()
 
-    print("Time of Sparse Recovery (s):")
-    print( (end-init) )
+    # print("Time of Sparse Recovery (s):")
+    # print( (end-init) )
     psnr_recovered = compute_psnr_on_datasets(ims,recovered.numpy())
 
     trainset, valset = random_split(trainset_full, [int((1 - val_split) * len(trainset_full)), int(val_split * len(trainset_full))])
