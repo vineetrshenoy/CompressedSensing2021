@@ -109,7 +109,7 @@ def get_sparse_recovered_dataloaders(trans, S, batch_size, val_split,  n_workers
 
     # print("Time of Sparse Recovery (s):")
     # print( (end-init) )
-    psnr_recovered = compute_psnr_on_datasets(ims,recovered.numpy())
+    # psnr_recovered = compute_psnr_on_datasets(ims,recovered.numpy())
 
     trainset, valset = random_split(trainset_full, [int((1 - val_split) * len(trainset_full)), int(val_split * len(trainset_full))])
 
@@ -119,7 +119,7 @@ def get_sparse_recovered_dataloaders(trans, S, batch_size, val_split,  n_workers
 
     testloader = DataLoader(testset, batch_size=1000, shuffle=False, num_workers=n_workers)
 
-    return trainloader, valloader, testloader, psnr_recovered
+    return trainloader, valloader, testloader
 
 def get_dataloaders(batch_size, val_split, transforms, n_workers):
     trainset_full = FashionMNIST(root="data", train=True, download=True, transform=transforms)

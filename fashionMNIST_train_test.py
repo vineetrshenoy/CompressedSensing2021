@@ -43,7 +43,7 @@ for i, ss in enumerate(sensing_schemes):
 
         # Build the dataloaders
         # trainloader, valloader, testloader = get_dataloaders(batch_size, val_split, trans, n_workers)
-        trainloader, valloader, testloader, _ = get_sparse_recovered_dataloaders(sensing_transform, S, batch_size, val_split, n_workers)
+        trainloader, valloader, testloader = get_sparse_recovered_dataloaders(sensing_transform, S, batch_size, val_split, n_workers)
         # Construct the model
         net = MNISTClassifier(resnet20(), lr, lr_milestones)
 
