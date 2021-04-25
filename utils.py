@@ -85,6 +85,11 @@ def compute_psnr_on_datasets(og, rec):
         
     return psnr_vals
 
+def show(img):
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
+    plt.grid(False)
+    plt.show()
 
 # very similar to get_dataloaders
 # New Inputs:

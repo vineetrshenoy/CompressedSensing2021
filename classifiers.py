@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
+from torchvision.utils import make_grid
+from utils import show
 
 class MNISTClassifier(pl.LightningModule):
     def __init__(self, backbone, lr, milestones):
@@ -67,6 +69,12 @@ class MNISTClassifier(pl.LightningModule):
         # TODO: Move this to test_epoch_end and aggregate results from all test batches
         cm_normalized = confusion_matrix(y, predicted_class, normalize='true')
         self.cm = cm_normalized
+
+        # Visualize images
+        n_vis = 50
+        if batch_idx == 0:
+            visual_batch = x[0:n_vis, :, :, :]
+            show(make_grid(visual_batch, nrow=10, padding=5, normalize=True))
 
         return n_correct, len(y)
 
