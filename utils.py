@@ -94,13 +94,17 @@ def compute_psnr_on_datasets(og, rec):
 # psnr_recovered: the array of psnr recovered corresponding to each recovered image
 def get_sparse_recovered_dataloaders(trans, S, batch_size, val_split,  n_workers):
     A = trans.A
-    ts_full = FashionMNIST(root="data", train=True, download=True,  transform=transforms.ToTensor() )
+    ts_full = FashionMNIST(root="data", train=True, download=True,  transform=transforms.ToTensor())
+    testset = FashionMNIST(root="data", train=False, download=True, transform=transforms.ToTensor())
     trainset_full = ts_full
     ims = ts_full.data.numpy()
+    ims_test = testset.data.numpy()
 
     # init = time.time()
-    [compressed, recovered] = speed_run_omp_on_batch(ims, S,A)
+    [compressed, recovered] = speed_run_omp_on_batch(ims, S, A)
     trainset_full.data = recovered
+    [compressed, recovered] = speed_run_omp_on_batch(ims_test, S, A)
+    testset.data = recovered
     # end = time.time()
 
     # print("Time of Sparse Recovery (s):")
@@ -112,7 +116,7 @@ def get_sparse_recovered_dataloaders(trans, S, batch_size, val_split,  n_workers
     trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=n_workers)
     valloader = DataLoader(valset, batch_size=len(valset), shuffle=False, num_workers=n_workers)
 
-    testset = FashionMNIST(root="data", train=False, download=True,  transform=transforms.ToTensor())
+
     testloader = DataLoader(testset, batch_size=1000, shuffle=False, num_workers=n_workers)
 
     return trainloader, valloader, testloader, psnr_recovered
