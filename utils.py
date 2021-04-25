@@ -40,14 +40,19 @@ def plot_results(compression_factors, test_accuracies, scheme_names):
 
 def make_cf_barplot(compression_factors, test_accuracy, scheme_name):
     plt.figure()
-    x_vals = ["{cf}%\n(M={M})".format(cf=cf * 100, M=int(N*cf)) for cf in compression_factors]
-    sns.barplot(x=x_vals, y=[test_acc * 100 for test_acc in test_accuracy])
+    x_vals = ["{cf:.0f}%\n(M={M})".format(cf=cf * 100, M=int(N*cf)) for cf in compression_factors]
+    splot = sns.barplot(x=x_vals, y=[test_acc * 100 for test_acc in test_accuracy])
+    for p in splot.patches:
+        splot.annotate(format(p.get_height(), '.1f'),
+                       (p.get_x() + p.get_width() / 2., p.get_height()),
+                       ha = 'center', va = 'center',
+                       xytext = (0, 9),
+                       textcoords = 'offset points')
     plt.ylim(0, 100)
     plt.xlabel("Compression Factor\n(Measurement Size)")
     plt.ylabel("Test Accuracy (%)")
     plt.title("Test Accuracy by Compression Factor\n({ss})".format(ss=scheme_name))
     plt.tight_layout()
-    # TODO: Add accuracy value labels on bar plot
 
     # Save figure
     if not (os.path.isdir("outputs")):
