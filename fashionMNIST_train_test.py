@@ -26,13 +26,12 @@ val_split = 0.1  # proportion of training data to use for validation
 bar_refresh_rate = 1  # how often to compute loss for display
 
 # Crude way of determining if we're on CIS machine or laptop
-# n_workers = 32 if torch.cuda.is_available() else 0
-n_workers = 16
+n_workers = 32 if torch.cuda.is_available() else 0
 
 compression_factors = [1, 0.5, 0.25, 0.1, 0.05, 0.01]
 sensing_schemes = [RandomProjection, RSTD]
 scheme_names = ["Gaussian Sensing", "Random Subsampling"]
-S = 20
+S = 50
 test_accuracy = np.zeros((len(sensing_schemes), len(compression_factors)))
 
 # Loop over sensing schemes and compression factors
@@ -48,16 +47,15 @@ for i, ss in enumerate(sensing_schemes):
         # Construct the model
         net = MNISTClassifier(resnet20(), lr, lr_milestones)
 
-        # if torch.cuda.is_available():
-        #     trainer = pl.Trainer(gpus=2, accelerator='ddp', max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)
-        # else:
-        #     trainer = pl.Trainer(gpus=0, max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)
-        trainer = pl.Trainer(gpus=0, max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)
+        if torch.cuda.is_available():
+            trainer = pl.Trainer(gpus=2, accelerator='ddp', max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)
+        else:
+            trainer = pl.Trainer(gpus=0, max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)
+
         # Train the network
-        # trainer.fit(net, trainloader, valloader)
+        trainer.fit(net, trainloader, valloader)
         # Test the network
         trainer.test(model=net, test_dataloaders=testloader)
-
         # Save off the test accuracy for this network
         test_accuracy[i][j] = net.test_acc
 

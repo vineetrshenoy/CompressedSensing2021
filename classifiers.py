@@ -70,13 +70,14 @@ class MNISTClassifier(pl.LightningModule):
         cm_normalized = confusion_matrix(y, predicted_class, normalize='true')
         self.cm = cm_normalized
 
+        print(x.shape)
         # Visualize images
-        n_vis = 50
-        if batch_idx == 0:
-            visual_batch = x[0:n_vis, :, :, :]
-            show(make_grid(visual_batch, nrow=10, padding=5, normalize=True))
-
-        return n_correct, len(y)
+        # n_vis = 50
+        # if batch_idx == 0:
+        #     visual_batch = x[0:n_vis, :, :, :]
+        #     show(make_grid(visual_batch, nrow=10, padding=5, normalize=True))
+        #
+        # return n_correct, len(y)
 
     def test_epoch_end(self, test_step_outputs):
         n_correct = np.sum(list(zip(*test_step_outputs))[0])
