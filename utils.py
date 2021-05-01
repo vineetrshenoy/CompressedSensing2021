@@ -87,11 +87,17 @@ def compute_psnr_on_datasets(og, rec):
         
     return psnr_vals
 
+# Shows the output of make_grid as an image
 def show(img):
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
     plt.grid(False)
     plt.show()
+
+# Rescales the tensor to 0-255 range and converts to uint8
+def normalize_tensor(x):
+    normalized = 255 * torch.div(x - torch.min(x), torch.max(x) - torch.min(x))
+    return normalized.type(torch.uint8)
 
 # very similar to get_dataloaders
 # New Inputs:
@@ -108,29 +114,19 @@ def get_sparse_recovered_dataloaders(trans, S, batch_size, val_split,  n_workers
     ims_test = testset.data.numpy()
     # print(testset.data.shape)
 
+    print("Performing sparse recovery on dataset...")
     # init = time.time()
     [compressed, recovered] = speed_run_omp_on_batch(ims, S, A)
-    recovered = 255 * torch.div(recovered - torch.min(recovered), torch.max(recovered) - torch.min(recovered))
-    trainset_full.data = recovered.type(torch.uint8)
+    trainset_full.data = normalize_tensor(recovered) 
     [compressed, recovered] = speed_run_omp_on_batch(ims_test, S, A)
-    recovered = 255 * torch.div(recovered - torch.min(recovered), torch.max(recovered) - torch.min(recovered))
-    testset.data = recovered.type(torch.uint8)
+    testset.data = normalize_tensor(recovered)
+
     # end = time.time()
 
     # print("Time of Sparse Recovery (s):")
     # print( (end-init) )
     # psnr_recovered = compute_psnr_on_datasets(ims,recovered.numpy())
-    # print(type(testset.data))
-    # print(testset.data.shape)
-    # visual_batch = testset.data[0:50, :, :]
-    # visual_batch = 255 * torch.div(visual_batch - torch.min(visual_batch), torch.max(visual_batch) - torch.min(visual_batch))
-    # visual_batch = torch.unsqueeze(visual_batch, 1)
-    # visual_batch = visual_batch.type(torch.uint8)
-    # print(visual_batch.shape)
-    # print(torch.min(visual_batch), torch.max(visual_batch))
-    # print(torch.mean(visual_batch))
-    # show(make_grid(visual_batch, nrow=10, padding=5, normalize=True))
-
+   
     trainset, valset = random_split(trainset_full, [int((1 - val_split) * len(trainset_full)), int(val_split * len(trainset_full))])
 
     trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=n_workers)

@@ -31,7 +31,7 @@ n_workers = 32 if torch.cuda.is_available() else 0
 compression_factors = [1, 0.5, 0.25, 0.1, 0.05, 0.01]
 sensing_schemes = [RandomProjection, RSTD]
 scheme_names = ["Gaussian Sensing", "Random Subsampling"]
-S = 50
+S = 220
 test_accuracy = np.zeros((len(sensing_schemes), len(compression_factors)))
 
 # Loop over sensing schemes and compression factors
