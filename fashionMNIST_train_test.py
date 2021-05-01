@@ -31,7 +31,8 @@ n_workers = 32 if torch.cuda.is_available() else 0
 compression_factors = [1, 0.5, 0.25, 0.1, 0.05, 0.01]
 sensing_schemes = [RandomProjection, RSTD]
 scheme_names = ["Gaussian Sensing", "Random Subsampling"]
-S = 220
+S = 200  # 200 achieves ~91.8% accuracy at 100% MR
+
 test_accuracy = np.zeros((len(sensing_schemes), len(compression_factors)))
 
 # Loop over sensing schemes and compression factors
@@ -42,8 +43,9 @@ for i, ss in enumerate(sensing_schemes):
         trans = transforms.Compose([transforms.ToTensor(), sensing_transform])
 
         # Build the dataloaders
-        # trainloader, valloader, testloader = get_dataloaders(batch_size, val_split, trans, n_workers)
-        trainloader, valloader, testloader = get_sparse_recovered_dataloaders(sensing_transform, S, batch_size, val_split, n_workers)
+        trainloader, valloader, testloader = get_dataloaders(batch_size, val_split, trans, n_workers)  # regular / proxy images
+        # (uncomment the line below if you want results for sparse recovered images)
+        # trainloader, valloader, testloader = get_sparse_recovered_dataloaders(sensing_transform, S, batch_size, val_split, n_workers)
         # Construct the model
         net = MNISTClassifier(resnet20(), lr, lr_milestones)
 
@@ -61,5 +63,5 @@ for i, ss in enumerate(sensing_schemes):
 
         # plot_train_results(net)
 
-print(test_accuracy)
+print(test_accuracy)  # TODO: this is getting printed twice, need to aggregate across both GPUs
 plot_results(compression_factors, test_accuracy, scheme_names)

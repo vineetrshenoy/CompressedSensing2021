@@ -117,7 +117,7 @@ def get_sparse_recovered_dataloaders(trans, S, batch_size, val_split,  n_workers
     print("Performing sparse recovery on dataset...")
     # init = time.time()
     [compressed, recovered] = speed_run_omp_on_batch(ims, S, A)
-    trainset_full.data = normalize_tensor(recovered) 
+    trainset_full.data = normalize_tensor(recovered)
     [compressed, recovered] = speed_run_omp_on_batch(ims_test, S, A)
     testset.data = normalize_tensor(recovered)
 
