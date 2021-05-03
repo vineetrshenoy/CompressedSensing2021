@@ -27,6 +27,68 @@ class CSTransform(object):
         
         return img
 
+class VRate(object):
+
+
+    def __init__(self, min_rate, max_rate, num_rates, dist, img_shp):
+        
+        self.rng = np.random.default_rng(seed=21) #Set RNG for repeatble results
+        self.N =  img_shp[1] *img_shp[2] #length of vectorized image
+
+        A = self.rng.standard_normal((self.N, self.N)) #sensing matrix
+        #A = np.transpose(scipy.linalg.orth(np.transpose(A)))
+        self.A = torch.from_numpy(A).type(torch.FloatTensor) 
+
+        self.dist = dist
+
+
+        self.min_rate = min_rate
+        self.max_rate = max_rate
+        self.num_rates = num_rates
+
+
+    def __call__(self, tensor):
+
+        shape = tensor.shape
+
+        if self.dist == 'beta':
+            dist_vals = self.rng.beta(2,5, self.num_rates)
+            dist_vals = dist_vals * (self.max_rate - self.min_rate) + self.min_rate
+
+
+        elif self.dist == 'exponential':
+            beta = -1 * self.max_rate / np.log(0.01)
+            dist_vals = self.rng.exponential(beta, self.num_rates)
+            dist_vals = dist_vals + self.min_rate*np.ones(dist_vals.shape)
+            excess = np.where(dist_vals > self.max_rate)
+            dist_vals[excess] = self.max_rate
+
+        meas_rate = np.floor(self.N * dist_vals)
+        row = meas_rate.shape[0]
+
+
+        x = torch.flatten(tensor, 1).transpose(0,1) #get image as vector       
+        
+        for i in range(0, row):
+
+            A = self.A[0:int(meas_rate[i]), :] #Gets the measurement matrix
+            y = torch.matmul(A, x.type(torch.FloatTensor)) #get measurements
+            Atran = torch.transpose(A, 0, 1)
+
+            proxy = torch.matmul(Atran, y) #proxy image
+            proxy = torch.reshape(proxy, shape)
+            #proxy = torch.unsqueeze(proxy, 0)
+            if i == 0:
+                data_mat = proxy
+            else:
+                data_mat = torch.cat((data_mat, proxy))
+
+            #data_mat = torch.squeeze(data_mat)
+
+
+        return data_mat
+
+   
 class RandomProjection(CSTransform):
 
 
@@ -202,6 +264,22 @@ if __name__ == '__main__':
 
     timg = torch.from_numpy(img)
     timg = torch.unsqueeze(timg, 0)
+
+
+    ################### Random Rates
+    VR = VRate(0.01, 0.25, 4, 'beta', timg.shape)
+    y_img = VR(timg)   
+    y_img = y_img[0, :].numpy()
+
+    plt.figure()
+    plt.subplot(121)
+    plt.imshow(img, cmap='gray')
+    plt.title("Original")
+    plt.subplot(122)
+    plt.imshow(y_img, cmap='gray')
+    plt.title("Proxy")
+    plt.savefig('rp.jpg')
+
 
     ################### Random Projections
     RP = RandomProjection(compression_factor, timg.shape)
