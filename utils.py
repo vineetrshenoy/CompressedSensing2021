@@ -137,6 +137,15 @@ def get_sparse_recovered_dataloaders(trans, S, batch_size, val_split,  n_workers
 
     return trainloader, valloader, testloader
 
+def get_rr_testdataloaders(batch_size, val_split, transforms, n_workers):
+
+    testset = FashionMNIST(root="data", train=False, download=True, transform=transforms)
+    testloader = DataLoader(testset, batch_size=1000, shuffle=False, num_workers=n_workers)
+
+    return testloader
+
+
+
 def get_dataloaders(batch_size, val_split, transforms, n_workers):
     trainset_full = FashionMNIST(root="data", train=True, download=True, transform=transforms)
     trainset, valset = random_split(trainset_full, [int((1 - val_split) * len(trainset_full)), int(val_split * len(trainset_full))])

@@ -27,6 +27,61 @@ class CSTransform(object):
         
         return img
 
+class RandomRate(object):
+
+
+    def __init__(self, min_rate, max_rate, dist, img_shp):
+        
+        self.rng = np.random.default_rng(seed=21) #Set RNG for repeatble results
+        self.N =  img_shp[1] *img_shp[2] #length of vectorized image
+
+        A = self.rng.standard_normal((self.N, self.N)) #sensing matrix
+        A = np.transpose(scipy.linalg.orth(np.transpose(A)))
+        self.A = torch.from_numpy(A).type(torch.FloatTensor) 
+
+        self.dist = dist
+
+
+        self.min_rate = min_rate
+        self.max_rate = max_rate
+
+
+    def __call__(self, tensor):
+
+        shape = tensor.shape
+
+        if self.dist == 'beta':
+            dist_vals = self.rng.beta(2,5, 1)
+            dist_vals = dist_vals * (self.max_rate - self.min_rate) + self.min_rate
+
+
+        elif self.dist == 'exponential':
+            beta = -1 * self.max_rate / np.log(0.01)
+            dist_vals = self.rng.exponential(beta, 1)
+            dist_vals = dist_vals + self.min_rate*np.ones(dist_vals.shape)
+            excess = np.where(dist_vals > self.max_rate)
+            dist_vals[excess] = self.max_rate
+
+        meas_rate = np.floor(self.N * dist_vals)
+    
+
+        x = torch.flatten(tensor, 1).transpose(0,1) #get image as vector       
+
+
+        A = self.A[0:int(meas_rate[0]), :] #Gets the measurement matrix
+        y = torch.matmul(A, x.type(torch.FloatTensor)) #get measurements
+        Atran = torch.transpose(A, 0, 1)
+
+        proxy = torch.matmul(Atran, y) #proxy image
+        proxy = torch.transpose(proxy, 0, 1)
+        proxy = torch.reshape(proxy, shape)
+        
+        return proxy
+
+
+
+
+
 class VRate(object):
 
 
@@ -36,7 +91,7 @@ class VRate(object):
         self.N =  img_shp[1] *img_shp[2] #length of vectorized image
 
         A = self.rng.standard_normal((self.N, self.N)) #sensing matrix
-        #A = np.transpose(scipy.linalg.orth(np.transpose(A)))
+        A = np.transpose(scipy.linalg.orth(np.transpose(A)))
         self.A = torch.from_numpy(A).type(torch.FloatTensor) 
 
         self.dist = dist
@@ -68,7 +123,7 @@ class VRate(object):
 
 
         x = torch.flatten(tensor, 1).transpose(0,1) #get image as vector       
-        
+        #data_mat = []
         for i in range(0, row):
 
             A = self.A[0:int(meas_rate[i]), :] #Gets the measurement matrix
@@ -78,15 +133,54 @@ class VRate(object):
             proxy = torch.matmul(Atran, y) #proxy image
             proxy = torch.reshape(proxy, shape)
             #proxy = torch.unsqueeze(proxy, 0)
+            #data_mat.append(proxy)
+            
             if i == 0:
                 data_mat = proxy
             else:
                 data_mat = torch.cat((data_mat, proxy))
-
+            
             #data_mat = torch.squeeze(data_mat)
 
-
+        #data_mat = torch.stack(data_mat)
         return data_mat
+
+
+class RandomRateTesting(CSTransform):
+
+
+    def __init__(self, compression_factor, img_shp):
+        
+        super().__init__(compression_factor, img_shp)
+
+        self.rng = np.random.default_rng(seed=21) #Set RNG for repeatble results
+        self.N =  img_shp[1] *img_shp[2] #length of vectorized image
+
+        A = self.rng.standard_normal((self.N, self.N)) #sensing matrix
+        A = np.transpose(scipy.linalg.orth(np.transpose(A)))
+        self.A = torch.from_numpy(A).type(torch.FloatTensor) 
+        self.compression_factor = compression_factor
+
+
+    def __call__(self, tensor):
+
+        shape = tensor.shape
+        M = np.floor(self.N * self.compression_factor)
+        
+        A = self.A[0:int(M), :]
+
+        x = torch.flatten(tensor, 1).transpose(0,1) #get image as vector
+        y = torch.matmul(A, x.type(torch.FloatTensor)) #get measurements
+
+        Atran = torch.transpose(A, 0, 1)
+
+        proxy = torch.matmul(Atran, y) #proxy image
+        proxy = torch.transpose(proxy, 0, 1)
+        proxy = torch.reshape(proxy, shape)
+
+        
+        return proxy
+
 
    
 class RandomProjection(CSTransform):
@@ -267,7 +361,7 @@ if __name__ == '__main__':
 
 
     ################### Random Rates
-    VR = VRate(0.01, 0.25, 4, 'beta', timg.shape)
+    VR = RandomRate(0.01, 0.25, 'beta', timg.shape)
     y_img = VR(timg)   
     y_img = y_img[0, :].numpy()
 

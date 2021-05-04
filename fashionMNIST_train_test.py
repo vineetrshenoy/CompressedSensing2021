@@ -11,10 +11,10 @@ import torchvision.transforms as transforms
 import pytorch_lightning as pl
 from resnet import resnet20
 from classifiers import MNISTClassifier
-from sense import RandomProjection, RSTD, USTD, RSFD, LFS, EFS
+from sense import RandomProjection, RSTD, USTD, RSFD, LFS, EFS, VRate, RandomRate, RandomRateTesting
 import numpy as np
 
-from utils import IM_DIM, plot_train_results, plot_results, get_dataloaders, get_sparse_recovered_dataloaders
+from utils import IM_DIM, plot_train_results, plot_results, get_dataloaders, get_sparse_recovered_dataloaders, get_rr_testdataloaders
 
 # Configuration
 batch_size = 128
@@ -35,6 +35,7 @@ S = 200  # 200 achieves ~91.8% accuracy at 100% MR
 
 test_accuracy = np.zeros((len(sensing_schemes), len(compression_factors)))
 
+'''
 # Loop over sensing schemes and compression factors
 for i, ss in enumerate(sensing_schemes):
     for j, cf in enumerate(compression_factors):
@@ -65,3 +66,53 @@ for i, ss in enumerate(sensing_schemes):
 
 print(test_accuracy)  # TODO: this is getting printed twice, need to aggregate across both GPUs
 plot_results(compression_factors, test_accuracy, scheme_names)
+'''
+
+
+for min_rate, max_rate in zip([0.01, 0.125, 0.01, 0.25, 0.375, 0.25], [0.125, 0.25, 0.25, 0.375, 0.5, 0.5]):
+
+
+    trans = transforms.Compose([transforms.ToTensor(), RandomRate(min_rate, max_rate, 'beta', IM_DIM)])
+    trainloader, valloader, testloader = get_dataloaders(batch_size, val_split, trans, n_workers)  # regular / proxy images
+
+    net = MNISTClassifier(resnet20(), lr, lr_milestones)
+
+    if torch.cuda.is_available():
+        trainer = pl.Trainer(gpus=2, accelerator='ddp', max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)
+    else:
+        trainer = pl.Trainer(gpus=0, max_epochs=num_epochs, progress_bar_refresh_rate=bar_refresh_rate)
+
+    # Train the network
+    trainer.fit(net, trainloader, valloader)
+
+    for test_rate in [0.01, 0.02, 0.05, .1, .2, .3, .4, .5, .75, .99]:
+        print('Test Rate: {}'.format(test_rate))
+        trans = transforms.Compose([transforms.ToTensor(), RandomRateTesting(test_rate, IM_DIM)])
+        testloader = get_rr_testdataloaders(batch_size, val_split, trans, n_workers)
+        trainer.test(model=net, test_dataloaders=testloader)
+
+'''
+#trans = transforms.Compose([transforms.ToTensor(), RandomRateTesting(0.1, IM_DIM)])
+#testloader = get_rr_testdataloaders(batch_size, val_split, trans, n_workers)
+
+trans = transforms.Compose([transforms.ToTensor(), RandomRate(0.01, 0.25, 'beta', IM_DIM)])
+trainloader, valloader, testloader = get_dataloaders(batch_size, val_split, trans, n_workers)  # regular / proxy images
+net = MNISTClassifier(resnet20(), lr, lr_milestones)
+iterator = iter(trainloader)
+temp = next(iterator)
+if torch.cuda.is_available():
+    trainer = pl.Trainer(gpus=2, accelerator='ddp', max_epochs=1, progress_bar_refresh_rate=bar_refresh_rate)
+else:
+    trainer = pl.Trainer(gpus=0, max_epochs=1, progress_bar_refresh_rate=bar_refresh_rate)
+
+
+trans = transforms.Compose([transforms.ToTensor(), RandomRateTesting(0.1, IM_DIM)])
+testloader = get_rr_testdataloaders(batch_size, val_split, trans, n_workers)
+
+# Train the network
+trainer.fit(net, trainloader, valloader)
+trainer.test(model=net, test_dataloaders=testloader)
+
+print('Hello World')
+
+'''
